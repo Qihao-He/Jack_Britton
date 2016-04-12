@@ -1,0 +1,167 @@
+nclude <stdio.h>
+#include <cstdlib>
+#include <ctime>
+#include <unistd.h>
+#include <cstring>
+#include <cmath>
+
+//colors
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
+void clear(void);
+
+int main(void) {
+    char width = 70;
+    char height = 70;
+    char trees[width][height];
+
+    //populate
+    srand(time(0));
+    double pRock = 0.2;
+    double pGrow = 0.01;
+    double pBurn = 0.0001;
+    double pExtinguish = 0.1;
+    for (char x = 0; x < width; x++) {
+        for (char y = 0; y < height; y++) {
+            double random = (double) rand() / RAND_MAX;
+            if (random < pRock) {
+                trees[x][y] = 'r';
+            } else {
+                trees[x][y] = '.';
+            }
+        }
+    }
+    unsigned int counter = 0;
+    char str[width*height*4*6 + 1];
+    char raining;
+    while (1) {
+        counter++;
+        //burn
+        //first, copy trees into a new, temporary array
+        char copy[width][height];
+        for (char x = 0; x < width; x++) {
+            for (char y = 0; y < width; y++) {
+                copy[x][y] = trees[x][y];
+            }
+        }
+
+        for (char x = 0; x < width; x++) {
+            for (char y = 0; y < height; y++) {
+                //if it's a tree and not a '.'
+                if (trees[x][y] == 'T' || trees[x][y] == 't') {
+                    //maybe burn on it's own
+                    double random = (double) rand() / RAND_MAX;
+                    if (random < pBurn) {
+                        trees[x][y] = 'B';
+                    }
+
+                    //check trees in cardinal directions
+                    if (x+1 <= width) {
+                        if (trees[x+1][y] == 'B') {
+                            copy[x][y] = 'B';
+                        }
+                    }
+                    if (x-1 >= 0) {
+                        if (trees[x-1][y] == 'B') {
+                            copy[x][y] = 'B';
+                        }
+                    }
+                    if (y+1 <= height) {
+                        if (trees[x][y+1] == 'B') {
+                            copy[x][y] = 'B';
+                        }
+                    }
+                    if (y-1 >= 0) {
+                        if (trees[x][y-1] == 'B') {
+                            copy[x][y] = 'B';
+                        }
+                    }
+                }
+            }
+        }
+
+        //intermediate step: extinguish trees that were lit last frame!
+        for (char x = 0; x < width; x++) {
+            for (char y = 0; y < height; y++) {
+                if (trees[x][y] == 'B' && copy[x][y] == 'B') {
+                    copy[x][y] = 'b';
+                } else if (trees[x][y] == 'b') {
+                    double random = (double) rand() / RAND_MAX;
+                    if (random < pExtinguish) {
+                        copy[x][y] = '.';
+                    }
+                } else if (trees[x][y] == '.') {
+                    //chance for stumps to grow back!
+                    double random = (double) rand() / RAND_MAX;
+                    if (random < pGrow) {
+                        copy[x][y] = 't';
+                    }
+                } else if (trees[x][y] == 't') {
+                    double random = (double) rand() / RAND_MAX;
+                    if (random < pGrow) {
+                        copy[x][y] = 'T';
+                    }
+                }
+            }
+        }
+
+        //copy the copy array to the trees array, print out, and get general info
+        unsigned int nTrees = 0;
+        unsigned int nSaps = 0;
+        unsigned int nRoots = 0;
+        unsigned int nRocks = 0;
+        unsigned int nFires = 0;
+        for (unsigned int i = 0; i < width*height*4*6+1; i++) {
+            str[i] = '\0';
+        }
+        for (char x = 0; x < width; x++) {
+            for (char y = 0; y < height; y++) {
+                trees[x][y] = copy[x][y];
+                switch (trees[x][y]) {
+                    case 'B':
+                        nFires++;
+                        strcat(str, ANSI_COLOR_RED "B " ANSI_COLOR_RESET);
+                        break;
+                    case 'b':
+                        nFires++;
+                        strcat(str, ANSI_COLOR_RED "b " ANSI_COLOR_RESET);
+                        break;
+                    case 'r':
+                        nRocks++;
+                        strcat(str, ANSI_COLOR_MAGENTA "r " ANSI_COLOR_RESET);
+                        break;
+                    case '.':
+                        nRoots++;
+                        strcat(str, ANSI_COLOR_GREEN ". " ANSI_COLOR_RESET);
+                        break;
+                    case 't':
+                        nSaps++;
+                        strcat(str, ANSI_COLOR_GREEN "t " ANSI_COLOR_RESET);
+                        break;
+                    case 'T':
+                        nTrees++;
+                        strcat(str, ANSI_COLOR_GREEN "T " ANSI_COLOR_RESET);
+                        break;
+                }
+            }
+            strcat(str, "\n");
+        }
+        clear();
+        printf("%s", str);
+        printf("Day: %03d r: %03d T: %03d t: %03d .: %03d B: %03d\n", counter, nRocks, nTrees, nSaps, nRoots, nFires);
+
+        //usleep(10000);
+    }
+}
+
+void clear(void) {
+    for (int i = 0; i < 40; i++) {
+        printf("\n");
+    }
+}
